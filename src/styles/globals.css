@@ -1,0 +1,259 @@
+@import "tailwindcss";
+
+:root {
+  /* Linear-style neutral dark palette */
+  --color-bg: #1b1c1f;
+  --color-surface: #18191c;
+  --color-surface-hover: #232428;
+  --color-surface-active: #2b2d31;
+  --color-surface-raised: #2f3035;
+  --color-border: #2e3035;
+  --color-border-subtle: #252629;
+  --color-text: #ededef;
+  --color-text-secondary: #9b9ca0;
+  --color-text-muted: #5e5f63;
+  --color-accent: #5e6ad2;
+  --color-accent-hover: #6e7ae2;
+  --color-accent-dim: #5e6ad233;
+  --color-danger: #eb5757;
+  --color-warning: #f2994a;
+  --color-success: #4cb782;
+  --color-info: #5e6ad2;
+
+  --sidebar-width: 220px;
+  --detail-width: 360px;
+  --titlebar-height: 38px;
+
+  /* Sidebar spacing tokens */
+  --sb-pad-x: 10px;
+  --sb-item-pad-x: 12px;
+  --sb-item-pad-y: 7px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--color-bg);
+  color: var(--color-text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+/* macOS titlebar drag region */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+/* ============================================================
+   Sidebar layout via CSS (data-attribute targeting)
+   These rules are OUTSIDE @layer → highest cascade priority.
+   ============================================================ */
+
+[data-sb="root"] {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+[data-sb="nav"] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding: 10px var(--sb-pad-x) 6px var(--sb-pad-x) !important;
+}
+
+[data-sb="nav-item"] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: var(--sb-item-pad-y) var(--sb-item-pad-x) !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: default !important;
+  border: none !important;
+  text-align: left !important;
+  width: 100% !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  transition: all 100ms !important;
+}
+[data-sb="nav-item"]:hover {
+  background: var(--color-surface-hover) !important;
+  color: var(--color-text) !important;
+}
+[data-sb="nav-item"][data-active="true"] {
+  background: var(--color-surface-active) !important;
+  color: var(--color-text) !important;
+}
+
+[data-sb="divider"] {
+  margin: 4px 12px !important;
+  border: none !important;
+  border-top: 1px solid var(--color-border-subtle) !important;
+  height: 0 !important;
+}
+
+[data-sb="scroll"] {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 2px var(--sb-pad-x) 0 var(--sb-pad-x) !important;
+}
+
+[data-sb="section-header"] {
+  display: flex !important;
+  width: 100% !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px var(--sb-item-pad-x) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--color-text-muted) !important;
+  background: none !important;
+  border: none !important;
+  cursor: default !important;
+  transition: color 150ms !important;
+}
+[data-sb="section-header"]:hover {
+  color: var(--color-text-secondary) !important;
+}
+
+[data-sb="item"] {
+  display: flex !important;
+  width: 100% !important;
+  align-items: center !important;
+  gap: 10px !important;
+  border-radius: 6px !important;
+  padding: var(--sb-item-pad-y) var(--sb-item-pad-x) !important;
+  font-size: 13px !important;
+  cursor: default !important;
+  border: none !important;
+  text-align: left !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  transition: all 100ms !important;
+}
+[data-sb="item"]:hover {
+  background: var(--color-surface-hover) !important;
+  color: var(--color-text) !important;
+}
+[data-sb="item"][data-active="true"] {
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent) !important;
+}
+
+[data-sb="item-list"] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+[data-sb="footer"] {
+  border-top: 1px solid var(--color-border) !important;
+  padding: 10px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  font-size: 12px !important;
+  color: var(--color-text-muted) !important;
+}
+
+/* Icon inside sidebar items */
+[data-sb="item"] > svg,
+[data-sb="item"] > [data-sb-icon] {
+  flex-shrink: 0 !important;
+  opacity: 0.6 !important;
+}
+
+/* Label text truncation */
+[data-sb="item-label"] {
+  min-width: 0 !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Count badge */
+[data-sb="count"] {
+  flex-shrink: 0 !important;
+  font-size: 11px !important;
+  font-variant-numeric: tabular-nums !important;
+  color: var(--color-text-muted) !important;
+}
+[data-sb="item"][data-active="true"] [data-sb="count"] {
+  color: var(--color-accent) !important;
+}
+
+/* Badge pill (repo count) */
+[data-sb="badge"] {
+  flex-shrink: 0 !important;
+  border-radius: 9999px !important;
+  padding: 1px 6px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.3 !important;
+  font-variant-numeric: tabular-nums !important;
+  background: var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+}
+[data-sb="item"][data-active="true"] [data-sb="badge"] {
+  background: var(--color-accent) !important;
+  color: var(--color-bg) !important;
+}
+
+/* Color dot (profile indicator) */
+[data-sb="dot"] {
+  width: 10px !important;
+  height: 10px !important;
+  flex-shrink: 0 !important;
+  border-radius: 50% !important;
+}
+
+/* Resize handle between sidebar and main */
+[data-sb="resize-handle"] {
+  width: 4px !important;
+  cursor: col-resize !important;
+  background: transparent !important;
+  transition: background 150ms !important;
+  flex-shrink: 0 !important;
+}
+[data-sb="resize-handle"]:hover {
+  background: var(--color-accent) !important;
+}
+
+/* Main content padding */
+[data-main-pad] {
+  padding: 20px !important;
+}
+
+/* ============================================================ */
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Selection color */
+::selection {
+  background: var(--color-accent-dim);
+  color: var(--color-accent);
+}
