@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { Skill, LinkStatus } from "../types/skill";
-import { scanSkillsRepo, recordScan } from "../utils/tauri";
+import { scanSkillsRepo, recordScan, refreshLinkStatuses } from "../utils/tauri";
+import { remoteScanSkillsRepo } from "../utils/tauri-remote";
+import { useRemoteStore } from "./useRemoteStore";
 
 export type GroupBy = "repo" | "category" | "alpha" | "status";
 
@@ -24,6 +26,7 @@ interface SkillState {
   setFilterStatus: (status: LinkStatus | null) => void;
   selectSkill: (id: string | null) => void;
   updateSkillLinkStatus: (skillName: string, status: LinkStatus) => void;
+  refreshStatuses: () => Promise<void>;
 }
 
 function applyFilters(
@@ -71,10 +74,13 @@ export const useSkillStore = create<SkillState>((set, get) => ({
 
   scan: async () => {
     const { repoPath, searchQuery, filterRepo, filterStatus } = get();
+    const serverId = useRemoteStore.getState().activeServerId;
     set({ loading: true, error: null });
     try {
-      const skills = await scanSkillsRepo(repoPath);
-      await recordScan();
+      const skills = serverId
+        ? await remoteScanSkillsRepo(serverId)
+        : await scanSkillsRepo(repoPath);
+      if (!serverId) await recordScan();
       const filteredSkills = applyFilters(
         skills,
         searchQuery,
@@ -121,5 +127,17 @@ export const useSkillStore = create<SkillState>((set, get) => ({
       filterStatus
     );
     set({ skills: updated, filteredSkills });
+  },
+
+  refreshStatuses: async () => {
+    const { skills, searchQuery, filterRepo, filterStatus } = get();
+    if (skills.length === 0) return;
+    try {
+      const refreshed = await refreshLinkStatuses(skills);
+      const filteredSkills = applyFilters(refreshed, searchQuery, filterRepo, filterStatus);
+      set({ skills: refreshed, filteredSkills });
+    } catch (err) {
+      console.error("Failed to refresh link statuses:", err);
+    }
   },
 }));

@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useRemoteStore } from "../../store/useRemoteStore";
 
 interface TitleBarProps {
   onRefresh: () => void;
@@ -6,6 +7,10 @@ interface TitleBarProps {
 }
 
 export function TitleBar({ onRefresh }: TitleBarProps) {
+  const activeServer = useRemoteStore((s) => s.getActiveServer());
+  const titleText = activeServer
+    ? `SkillPilot — ${activeServer.name}`
+    : "SkillPilot";
   return (
     <header
       data-tauri-drag-region
@@ -21,7 +26,7 @@ export function TitleBar({ onRefresh }: TitleBarProps) {
         className="flex-1 flex items-center justify-center select-none pointer-events-none"
       >
         <span className="text-[12px] font-medium text-[var(--color-text-muted)] tracking-wide">
-          SkillPilot
+          {titleText}
         </span>
       </div>
 

@@ -20,7 +20,7 @@ const EXCLUDED_DIRS: &[&str] = &[
 ];
 
 /// Parse YAML frontmatter from SKILL.md content
-fn parse_frontmatter(content: &str) -> SkillFrontmatter {
+pub(crate) fn parse_frontmatter(content: &str) -> SkillFrontmatter {
     if !content.starts_with("---") {
         return SkillFrontmatter::default();
     }
@@ -35,7 +35,7 @@ fn parse_frontmatter(content: &str) -> SkillFrontmatter {
 }
 
 /// Parse .gitmodules file to get submodule name→path mapping
-fn parse_gitmodules(repo_root: &Path) -> HashMap<String, PathBuf> {
+pub(crate) fn parse_gitmodules(repo_root: &Path) -> HashMap<String, PathBuf> {
     let gitmodules_path = repo_root.join(".gitmodules");
     let mut modules = HashMap::new();
 
@@ -73,7 +73,7 @@ fn parse_gitmodules(repo_root: &Path) -> HashMap<String, PathBuf> {
 }
 
 /// Infer which repo/submodule a skill belongs to
-fn infer_source_repo(skill_path: &Path, repo_root: &Path, submodules: &HashMap<String, PathBuf>) -> String {
+pub(crate) fn infer_source_repo(skill_path: &Path, repo_root: &Path, submodules: &HashMap<String, PathBuf>) -> String {
     // Check if skill path is under any submodule
     for (name, sub_path) in submodules {
         if let Ok(canon_sub) = sub_path.canonicalize() {
@@ -98,7 +98,7 @@ fn infer_source_repo(skill_path: &Path, repo_root: &Path, submodules: &HashMap<S
 }
 
 /// Infer category from path segments
-fn infer_category(skill_path: &Path, repo_root: &Path) -> Option<String> {
+pub(crate) fn infer_category(skill_path: &Path, repo_root: &Path) -> Option<String> {
     let rel = skill_path.strip_prefix(repo_root).ok()?;
     let components: Vec<String> = rel
         .components()
@@ -118,7 +118,7 @@ fn infer_category(skill_path: &Path, repo_root: &Path) -> Option<String> {
 }
 
 /// Extract referenced skill names from SKILL.md content
-fn extract_dependencies(content: &str) -> Vec<String> {
+pub(crate) fn extract_dependencies(content: &str) -> Vec<String> {
     let re = Regex::new(r#"(?:skill|invoke|use|require|depend)[s]?\s*[:\-]?\s*["'`]([a-zA-Z0-9_-]+)["'`]"#).unwrap();
     let mut deps: Vec<String> = re
         .captures_iter(content)

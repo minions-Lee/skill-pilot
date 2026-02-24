@@ -41,6 +41,17 @@ export const applyProfileLinks = (
 ) =>
   invoke<string[]>("apply_profile_links", { skillEntries, targetPath });
 
+export const syncProjectLinks = (
+  skillEntries: [string, string][],
+  projectPath: string
+) =>
+  invoke<string[]>("sync_project_links", { skillEntries, projectPath });
+
+export const getProjectSkillLinks = (projectPath: string) =>
+  invoke<[string, string, string][]>("get_project_skill_links", {
+    projectPath,
+  });
+
 export const cleanBrokenLinks = (targetPath: string | null) =>
   invoke<string[]>("clean_broken_links", { targetPath });
 

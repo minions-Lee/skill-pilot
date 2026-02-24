@@ -11,6 +11,13 @@ export function ProjectCard({ project, profiles, onClick }: ProjectCardProps) {
   const assignedProfiles = profiles.filter((p) =>
     project.profile_ids.includes(p.id)
   );
+  // Debug: verify data reaching ProjectCard
+  if (project.profile_ids.length > 0 && assignedProfiles.length === 0) {
+    console.warn(
+      `[ProjectCard] "${project.name}" has profile_ids=${JSON.stringify(project.profile_ids)} but matched 0 profiles. Available profile IDs:`,
+      profiles.map((p) => p.id)
+    );
+  }
   const extraCount = project.extra_skill_ids.length;
 
   /** Truncate path, keeping the last 2-3 segments visible. */

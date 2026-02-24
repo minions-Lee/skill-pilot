@@ -116,6 +116,52 @@ pub fn apply_profile_links(
     Ok(created)
 }
 
+/// Sync a project's skills directory: create missing symlinks and remove stale ones
+#[tauri::command]
+pub fn sync_project_links(
+    skill_entries: Vec<(String, String)>, // desired (name, source_path) pairs
+    project_path: String,
+) -> Result<Vec<String>, AppError> {
+    let target_dir = project_skills_dir(&project_path);
+
+    // Collect desired skill names
+    let desired_names: std::collections::HashSet<String> =
+        skill_entries.iter().map(|(name, _)| name.clone()).collect();
+
+    // Remove symlinks that are no longer desired
+    if target_dir.is_dir() {
+        for entry in fs::read_dir(&target_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            let meta = match path.symlink_metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            if meta.file_type().is_symlink() {
+                let name = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                if !desired_names.contains(&name) {
+                    let _ = fs::remove_file(&path);
+                }
+            }
+        }
+    }
+
+    // Create/update desired symlinks
+    let mut created = Vec::new();
+    for (name, source) in &skill_entries {
+        let source_path = PathBuf::from(source);
+        match create_skill_link(name, &source_path, &target_dir) {
+            Ok(()) => created.push(name.clone()),
+            Err(e) => eprintln!("Failed to link {}: {}", name, e),
+        }
+    }
+
+    Ok(created)
+}
+
 /// Clean up broken symlinks in a skills directory
 #[tauri::command]
 pub fn clean_broken_links(target_path: Option<String>) -> Result<Vec<String>, AppError> {
@@ -148,6 +194,46 @@ pub fn clean_broken_links(target_path: Option<String>) -> Result<Vec<String>, Ap
     }
 
     Ok(cleaned)
+}
+
+/// Scan a project's .claude/skills/ directory and return all links found
+/// Returns (name, target_path, status) for each entry
+#[tauri::command]
+pub fn get_project_skill_links(
+    project_path: String,
+) -> Result<Vec<(String, String, String)>, AppError> {
+    let target_dir = project_skills_dir(&project_path);
+    if !target_dir.is_dir() {
+        return Ok(Vec::new());
+    }
+
+    let mut results = Vec::new();
+    for entry in fs::read_dir(&target_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+
+        let meta = match path.symlink_metadata() {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+
+        if meta.file_type().is_symlink() {
+            let target = fs::read_link(&path)
+                .map(|t| t.to_string_lossy().to_string())
+                .unwrap_or_default();
+            let status = if path.exists() { "Active" } else { "Broken" };
+            results.push((name, target, status.to_string()));
+        } else if meta.is_dir() {
+            results.push((name, path.to_string_lossy().to_string(), "Direct".to_string()));
+        }
+    }
+
+    results.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    Ok(results)
 }
 
 /// Get all symlinks in the user skills directory

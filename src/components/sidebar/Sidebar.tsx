@@ -4,6 +4,7 @@ import type { Profile } from "../../types/profile";
 import RepoSection from "./RepoSection";
 import ProfileList from "./ProfileList";
 import ProjectList from "./ProjectList";
+import { EnvironmentSwitcher } from "../remote/EnvironmentSwitcher";
 
 type View = "skills" | "profiles" | "projects" | "graph" | "stats";
 
@@ -16,6 +17,7 @@ interface SidebarProps {
   onSelectProfile: (profile: Profile) => void;
   onDeleteProfile: (profile: Profile) => void;
   onSettings: () => void;
+  onManageServers: () => void;
 }
 
 /* Linear-style icon for each nav item */
@@ -100,6 +102,7 @@ export function Sidebar({
   onSelectProfile,
   onDeleteProfile,
   onSettings,
+  onManageServers,
 }: SidebarProps) {
   const skills = useSkillStore((s) => s.skills);
 
@@ -110,6 +113,9 @@ export function Sidebar({
 
   return (
     <div data-sb="root">
+      {/* Environment switcher */}
+      <EnvironmentSwitcher onManageServers={onManageServers} />
+
       {/* Nav */}
       <nav data-sb="nav">
         {VIEW_ITEMS.map((item) => (

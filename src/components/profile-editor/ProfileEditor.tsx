@@ -4,7 +4,7 @@ import { useSkillStore } from "../../store/useSkillStore";
 
 interface ProfileEditorProps {
   profile: Profile | null;
-  onSave: (profile: Profile) => void;
+  onSave: (profile: Profile) => void | Promise<void>;
   onClose: () => void;
 }
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import type { Profile } from "../../types/profile";
 import { useProjectStore } from "../../store/useProjectStore";
 
@@ -6,7 +6,7 @@ type ApplyLevel = "user" | "project";
 
 interface ProfileApplyProps {
   profile: Profile;
-  onApply: (profileId: string, targetPath: string | null) => void;
+  onApply: (profileId: string, targetPaths: (string | null)[]) => void;
   onClose: () => void;
 }
 
@@ -14,24 +14,42 @@ export function ProfileApply({ profile, onApply, onClose }: ProfileApplyProps) {
   const projects = useProjectStore((s) => s.projects);
 
   const [level, setLevel] = useState<ApplyLevel>("user");
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(
-    projects[0]?.id ?? ""
+  // Pre-select projects that already have this profile assigned
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>(() =>
+    projects.filter((p) => p.profile_ids.includes(profile.id)).map((p) => p.id)
   );
 
-  const selectedProject = useMemo(
-    () => projects.find((p) => p.id === selectedProjectId) ?? null,
-    [projects, selectedProjectId]
-  );
+  const handleToggleProject = useCallback((projectId: string) => {
+    setSelectedProjectIds((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId]
+    );
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    if (selectedProjectIds.length === projects.length) {
+      setSelectedProjectIds([]);
+    } else {
+      setSelectedProjectIds(projects.map((p) => p.id));
+    }
+  }, [selectedProjectIds.length, projects]);
 
   const handleApply = useCallback(() => {
     if (level === "user") {
-      onApply(profile.id, null);
-    } else if (selectedProject) {
-      onApply(profile.id, selectedProject.path);
+      onApply(profile.id, [null]);
+    } else {
+      const paths = selectedProjectIds
+        .map((pid) => projects.find((p) => p.id === pid))
+        .filter(Boolean)
+        .map((p) => p!.path);
+      if (paths.length > 0) {
+        onApply(profile.id, paths);
+      }
     }
-  }, [level, profile.id, selectedProject, onApply]);
+  }, [level, profile.id, selectedProjectIds, projects, onApply]);
 
-  const canApply = level === "user" || selectedProject !== null;
+  const canApply = level === "user" || selectedProjectIds.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -144,37 +162,64 @@ export function ProfileApply({ profile, onApply, onClose }: ProfileApplyProps) {
               <div>
                 <p className="text-[13px] text-[var(--color-text)]">Project Level</p>
                 <p className="text-[11px] text-[var(--color-text-muted)]">
-                  Selected project directory
+                  Selected project directories
                 </p>
               </div>
             </label>
           </div>
 
-          {/* Project selector (if project level) */}
+          {/* Project selector (if project level) — multi-select checkboxes */}
           {level === "project" && (
             <div>
-              <label className="block text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-                Project
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+                  Projects
+                </label>
+                {projects.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="text-[11px] text-[var(--color-accent)] hover:underline"
+                  >
+                    {selectedProjectIds.length === projects.length
+                      ? "Deselect all"
+                      : "Select all"}
+                  </button>
+                )}
+              </div>
               {projects.length === 0 ? (
                 <p className="text-xs text-[var(--color-text-muted)] italic">
                   No projects configured. Add one in Project Binder first.
                 </p>
               ) : (
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]
-                             px-3 py-1.5 text-[13px] text-[var(--color-text)]
-                             focus:outline-none focus:border-[var(--color-accent)]
-                             transition-colors duration-150"
-                >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} -- {p.path}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-1 max-h-48 overflow-y-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5">
+                  {projects.map((p) => {
+                    const checked = selectedProjectIds.includes(p.id);
+                    return (
+                      <label
+                        key={p.id}
+                        className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 cursor-pointer
+                                   transition-colors duration-100
+                                   ${checked ? "bg-[var(--color-accent-dim)]" : "hover:bg-[var(--color-surface-hover)]"}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => handleToggleProject(p.id)}
+                          className="accent-[var(--color-accent)] shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-[13px] text-[var(--color-text)] truncate">
+                            {p.name}
+                          </p>
+                          <p className="text-[11px] text-[var(--color-text-muted)] font-mono truncate">
+                            {p.path}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
@@ -200,7 +245,9 @@ export function ProfileApply({ profile, onApply, onClose }: ProfileApplyProps) {
                        hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed
                        transition-opacity duration-150"
           >
-            Apply
+            Apply{level === "project" && selectedProjectIds.length > 1
+              ? ` (${selectedProjectIds.length})`
+              : ""}
           </button>
         </div>
       </div>
