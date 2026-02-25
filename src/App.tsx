@@ -79,50 +79,50 @@ export default function App() {
     if (viewingProfile?.id === profile.id) setViewingProfile(null);
   };
 
-  const handleApplyProfileAction = useCallback(
+  const applyProfileToTargets = useCallback(
     async (profileId: string, targetPaths: (string | null)[]) => {
       const skills = useSkillStore.getState().skills;
       const profile = useProfileStore
         .getState()
         .profiles.find((p) => p.id === profileId);
-      if (!profile) {
-        setApplyingProfile(null);
-        return;
-      }
+      if (!profile) return;
 
       const entries = resolveProfileSkillEntries(profile, skills);
-      if (entries.length === 0) {
-        setApplyingProfile(null);
-        return;
-      }
+      if (entries.length === 0) return;
 
-      try {
-        for (const targetPath of targetPaths) {
-          await applyProfileLinks(entries, targetPath);
+      for (const targetPath of targetPaths) {
+        await applyProfileLinks(entries, targetPath);
 
-          // 配置即链接: 同步更新项目的 profile_ids，确保 UI 能回显
-          if (targetPath !== null) {
-            const projectStore = useProjectStore.getState();
-            const project = projectStore.projects.find(
-              (p) => p.path === targetPath
-            );
-            if (project && !project.profile_ids.includes(profileId)) {
-              await projectStore.saveProject({
-                ...project,
-                profile_ids: [...project.profile_ids, profileId],
-              });
-            }
+        // 配置即链接: 同步更新项目的 profile_ids，确保 UI 能回显
+        if (targetPath !== null) {
+          const projectStore = useProjectStore.getState();
+          const project = projectStore.projects.find(
+            (p) => p.path === targetPath
+          );
+          if (project && !project.profile_ids.includes(profileId)) {
+            await projectStore.saveProject({
+              ...project,
+              profile_ids: [...project.profile_ids, profileId],
+            });
           }
         }
-        await recordProfileApply(profileId);
-        await useSkillStore.getState().scan();
+      }
+      await recordProfileApply(profileId);
+      await useSkillStore.getState().scan();
+    },
+    []
+  );
+
+  const handleApplyProfileAction = useCallback(
+    async (profileId: string, targetPaths: (string | null)[]) => {
+      try {
+        await applyProfileToTargets(profileId, targetPaths);
       } catch (err) {
         console.error("Apply profile failed:", err);
       }
-
       setApplyingProfile(null);
     },
-    []
+    [applyProfileToTargets]
   );
 
   const renderMainContent = () => {

@@ -13,7 +13,7 @@ interface ProfileApplyProps {
 export function ProfileApply({ profile, onApply, onClose }: ProfileApplyProps) {
   const projects = useProjectStore((s) => s.projects);
 
-  const [level, setLevel] = useState<ApplyLevel>("user");
+  const [level, setLevel] = useState<ApplyLevel>("project");
   // Pre-select projects that already have this profile assigned
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>(() =>
     projects.filter((p) => p.profile_ids.includes(profile.id)).map((p) => p.id)
@@ -97,6 +97,41 @@ export function ProfileApply({ profile, onApply, onClose }: ProfileApplyProps) {
               Target Level
             </label>
 
+            {/* Project level — on top, default */}
+            <label
+              className={`flex items-center gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors duration-150 ${
+                level === "project"
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent-dim)]"
+                  : "border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]"
+              }`}
+            >
+              <input
+                type="radio"
+                name="apply-level"
+                value="project"
+                checked={level === "project"}
+                onChange={() => setLevel("project")}
+                className="sr-only"
+              />
+              <span
+                className={`inline-flex items-center justify-center w-4 h-4 rounded-full border-2 shrink-0 ${
+                  level === "project"
+                    ? "border-[var(--color-accent)]"
+                    : "border-[var(--color-text-muted)]"
+                }`}
+              >
+                {level === "project" && (
+                  <span className="w-2 h-2 rounded-full bg-[var(--color-accent)]" />
+                )}
+              </span>
+              <div>
+                <p className="text-[13px] text-[var(--color-text)]">Project Level</p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  Selected project directories
+                </p>
+              </div>
+            </label>
+
             {/* User level */}
             <label
               className={`flex items-center gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors duration-150 ${
@@ -128,41 +163,6 @@ export function ProfileApply({ profile, onApply, onClose }: ProfileApplyProps) {
                 <p className="text-[13px] text-[var(--color-text)]">User Level</p>
                 <p className="text-[11px] text-[var(--color-text-muted)]">
                   ~/.claude/skills/
-                </p>
-              </div>
-            </label>
-
-            {/* Project level */}
-            <label
-              className={`flex items-center gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors duration-150 ${
-                level === "project"
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent-dim)]"
-                  : "border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]"
-              }`}
-            >
-              <input
-                type="radio"
-                name="apply-level"
-                value="project"
-                checked={level === "project"}
-                onChange={() => setLevel("project")}
-                className="sr-only"
-              />
-              <span
-                className={`inline-flex items-center justify-center w-4 h-4 rounded-full border-2 shrink-0 ${
-                  level === "project"
-                    ? "border-[var(--color-accent)]"
-                    : "border-[var(--color-text-muted)]"
-                }`}
-              >
-                {level === "project" && (
-                  <span className="w-2 h-2 rounded-full bg-[var(--color-accent)]" />
-                )}
-              </span>
-              <div>
-                <p className="text-[13px] text-[var(--color-text)]">Project Level</p>
-                <p className="text-[11px] text-[var(--color-text-muted)]">
-                  Selected project directories
                 </p>
               </div>
             </label>

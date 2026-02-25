@@ -44,16 +44,17 @@ export function ProfileEditor({ profile, onSave, onClose }: ProfileEditorProps) 
     return skills
       .filter(
         (s) =>
+          !skillIds.includes(s.name) &&
           !skillIds.includes(s.id) &&
           (s.name.toLowerCase().includes(q) ||
-            s.description.toLowerCase().includes(q) ||
-            s.tags.some((t) => t.toLowerCase().includes(q)))
+            (s.description ?? "").toLowerCase().includes(q) ||
+            (s.tags ?? []).some((t) => t.toLowerCase().includes(q)))
       )
       .slice(0, 10);
   }, [skills, skillIds, searchQuery]);
 
-  const handleAddSkill = useCallback((skillId: string) => {
-    setSkillIds((prev) => [...prev, skillId]);
+  const handleAddSkill = useCallback((skillName: string) => {
+    setSkillIds((prev) => [...prev, skillName]);
     setSearchQuery("");
   }, []);
 
@@ -234,7 +235,7 @@ export function ProfileEditor({ profile, onSave, onClose }: ProfileEditorProps) 
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => handleAddSkill(s.id)}
+                      onClick={() => handleAddSkill(s.name)}
                       className="flex w-full items-center gap-2 px-3 py-1.5 text-left
                                  hover:bg-[var(--color-surface-hover)] transition-colors duration-100"
                     >
