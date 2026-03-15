@@ -1,3 +1,4 @@
+pub mod agent_dirs;
 pub mod scanner;
 pub mod linker;
 pub mod profiles;

@@ -1,3 +1,4 @@
+use crate::commands::agent_dirs::get_active_dir_names;
 use crate::error::AppError;
 use crate::models::{LinkStatus, Skill, SkillFrontmatter};
 use regex::Regex;
@@ -182,6 +183,38 @@ fn check_user_link_status(skill_name: &str, skill_source: &Path) -> LinkStatus {
     }
 }
 
+/// Check link status for all active agent dirs
+/// Returns HashMap<dir_name, LinkStatus>
+fn check_user_link_statuses_all(skill_name: &str, skill_source: &Path) -> HashMap<String, LinkStatus> {
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return HashMap::new(),
+    };
+    let active_dirs = get_active_dir_names().unwrap_or_else(|_| vec![".claude".to_string()]);
+    let mut result = HashMap::new();
+    for dir in active_dirs {
+        let link_path = home.join(&dir).join("skills").join(skill_name);
+        let status = check_single_link_status(&link_path, skill_source);
+        result.insert(dir, status);
+    }
+    result
+}
+
+fn check_single_link_status(link_path: &std::path::Path, _skill_source: &Path) -> LinkStatus {
+    match link_path.symlink_metadata() {
+        Err(_) => LinkStatus::Inactive,
+        Ok(meta) => {
+            if meta.file_type().is_symlink() {
+                if link_path.exists() { LinkStatus::Active } else { LinkStatus::Broken }
+            } else if meta.is_dir() {
+                LinkStatus::Direct
+            } else {
+                LinkStatus::Inactive
+            }
+        }
+    }
+}
+
 /// Scan the entire skills repository and return all discovered skills
 #[tauri::command]
 pub fn scan_skills_repo(repo_path: String) -> Result<Vec<Skill>, AppError> {
@@ -273,6 +306,7 @@ pub fn scan_skills_repo(repo_path: String) -> Result<Vec<Skill>, AppError> {
         let has_scripts = skill_dir.join("scripts").is_dir();
         let has_references = skill_dir.join("references").is_dir();
         let link_status_user = check_user_link_status(&name, &skill_dir);
+        let link_statuses_by_agent = check_user_link_statuses_all(&name, &skill_dir);
 
         skills.push(Skill {
             id,
@@ -285,6 +319,7 @@ pub fn scan_skills_repo(repo_path: String) -> Result<Vec<Skill>, AppError> {
             has_scripts,
             has_references,
             link_status_user,
+            link_statuses_by_agent,
             dependencies,
             raw_content: content,
         });
@@ -303,6 +338,7 @@ pub fn refresh_link_statuses(skills: Vec<Skill>) -> Vec<Skill> {
         .into_iter()
         .map(|mut s| {
             s.link_status_user = check_user_link_status(&s.name, &s.source_path);
+            s.link_statuses_by_agent = check_user_link_statuses_all(&s.name, &s.source_path);
             s
         })
         .collect()

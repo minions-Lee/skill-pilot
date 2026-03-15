@@ -292,6 +292,7 @@ pub fn remote_scan_skills_repo(
             has_scripts,
             has_references,
             link_status_user,
+            link_statuses_by_agent: std::collections::HashMap::new(),
             dependencies,
             raw_content: content,
         });

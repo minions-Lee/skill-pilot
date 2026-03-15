@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -42,8 +43,10 @@ pub struct Skill {
     pub has_scripts: bool,
     /// Whether the skill has a references/ directory
     pub has_references: bool,
-    /// User-level link status (~/.claude/skills/)
+    /// User-level link status (~/.claude/skills/) — 仅代表 .claude 目录的状态
     pub link_status_user: LinkStatus,
+    /// Per-agent-dir link status — key 为 dir 名称如 ".claude"
+    pub link_statuses_by_agent: HashMap<String, LinkStatus>,
     /// Referenced skill names (dependencies)
     pub dependencies: Vec<String>,
     /// Raw SKILL.md content for preview

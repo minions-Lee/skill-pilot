@@ -3,7 +3,7 @@ mod error;
 mod models;
 mod ssh;
 
-use commands::{linker, profiles, projects, remote, scanner, shell, stats};
+use commands::{agent_dirs, linker, profiles, projects, remote, scanner, shell, stats};
 use ssh::connection::SshPool;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -13,6 +13,9 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(SshPool::new())
         .invoke_handler(tauri::generate_handler![
+            // Agent Dirs
+            agent_dirs::list_agent_dirs,
+            agent_dirs::save_agent_dirs,
             // Scanner
             scanner::scan_skills_repo,
             scanner::refresh_link_statuses,
@@ -24,6 +27,8 @@ pub fn run() {
             linker::clean_broken_links,
             linker::get_user_skill_links,
             linker::get_project_skill_links,
+            linker::get_project_skill_links_all,
+            linker::sync_agent_dir_links,
             // Profiles
             profiles::list_profiles,
             profiles::save_profile,
