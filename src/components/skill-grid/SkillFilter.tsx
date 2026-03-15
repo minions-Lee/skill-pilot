@@ -1,4 +1,5 @@
 import { useSkillStore, type GroupBy } from "../../store/useSkillStore";
+import { useAgentDirStore } from "../../store/useAgentDirStore";
 import type { LinkStatus } from "../../types/skill";
 
 const groupByOptions: { value: GroupBy; label: string }[] = [
@@ -22,7 +23,11 @@ export function SkillFilter() {
   const setGroupBy = useSkillStore((s) => s.setGroupBy);
   const filterStatus = useSkillStore((s) => s.filterStatus);
   const setFilterStatus = useSkillStore((s) => s.setFilterStatus);
+  const filterAgentDir = useSkillStore((s) => s.filterAgentDir);
+  const setFilterAgentDir = useSkillStore((s) => s.setFilterAgentDir);
   const filteredSkills = useSkillStore((s) => s.filteredSkills);
+
+  const enabledDirs = useAgentDirStore((s) => s.getActiveAgentDirs());
 
   return (
     <div className="flex flex-col gap-2 border-b border-[var(--color-border)]" style={{ padding: "10px 20px" }}>
@@ -96,6 +101,37 @@ export function SkillFilter() {
             );
           })}
         </div>
+
+        {/* Agent dir filter chips — 只在多个启用目录时显示 */}
+        {enabledDirs.length > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setFilterAgentDir(null)}
+              className={`h-7 px-2.5 rounded-md text-[12px] font-medium transition-colors duration-100 cursor-default
+                ${filterAgentDir === null
+                  ? "bg-[var(--color-surface-active)] text-[var(--color-text)]"
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+                }`}
+            >
+              All Agents
+            </button>
+            {enabledDirs.map((d) => (
+              <button
+                key={d.dir}
+                type="button"
+                onClick={() => setFilterAgentDir(d.dir)}
+                className={`h-7 px-2.5 rounded-md text-[12px] font-mono transition-colors duration-100 cursor-default
+                  ${filterAgentDir === d.dir
+                    ? "bg-[var(--color-surface-active)] text-[var(--color-text)]"
+                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+                  }`}
+              >
+                {d.dir}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Result count, pushed right */}
         <span className="ml-auto text-[12px] text-[var(--color-text-muted)] tabular-nums">

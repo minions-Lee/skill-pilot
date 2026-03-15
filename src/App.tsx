@@ -31,7 +31,7 @@ export default function App() {
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [applyingProfile, setApplyingProfile] = useState<Profile | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"general" | "servers">("general");
+  const [settingsTab, setSettingsTab] = useState<"general" | "servers" | "agents">("general");
   const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectConfig | null>(null);
 

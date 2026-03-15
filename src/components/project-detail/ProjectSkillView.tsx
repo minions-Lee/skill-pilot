@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSkillStore } from "../../store/useSkillStore";
 import { useProfileStore } from "../../store/useProfileStore";
+import { useAgentDirStore } from "../../store/useAgentDirStore";
 import {
   toggleSkillProjectLevel,
   recordToggle,
-  getProjectSkillLinks,
+  getProjectSkillLinksAll,
 } from "../../utils/tauri";
 import type { ProjectConfig } from "../../types/project";
 import type { LinkStatus } from "../../types/skill";
@@ -28,7 +29,12 @@ interface ProjectLink {
 export function ProjectSkillView({ project, onEdit, onBack }: ProjectSkillViewProps) {
   const skills = useSkillStore((s) => s.skills);
   const profiles = useProfileStore((s) => s.profiles);
-  const [links, setLinks] = useState<ProjectLink[]>([]);
+  const enabledDirs = useAgentDirStore((s) => s.getActiveAgentDirs());
+
+  // 选中的 agent dir（默认第一个 enabled dir）
+  const [selectedDir, setSelectedDir] = useState<string>(() => enabledDirs[0]?.dir ?? ".claude");
+  // allLinks: key = dir_name, value = raw links
+  const [allLinks, setAllLinks] = useState<Record<string, [string, string, string][]>>({});
   const [loading, setLoading] = useState(false);
 
   // Refresh user-level skill link statuses on mount
@@ -36,61 +42,71 @@ export function ProjectSkillView({ project, onEdit, onBack }: ProjectSkillViewPr
     useSkillStore.getState().refreshStatuses();
   }, [project.id]);
 
-  // Scan project's .claude/skills/ directory on mount / project switch
+  // Scan project's skills directories on mount / project switch
   useEffect(() => {
     if (!project.path) {
-      setLinks([]);
+      setAllLinks({});
       return;
     }
     setLoading(true);
-    getProjectSkillLinks(project.path)
-      .then((entries) => {
-        // Build reverse-lookup: skill name → profile
-        const skillToProfile = new Map<string, { name: string; color?: string }>();
-        for (const pid of project.profile_ids) {
-          const profile = profiles.find((p) => p.id === pid);
-          if (!profile) continue;
-          for (const sid of profile.skill_ids) {
-            const skill = skills.find((s) => s.id === sid || s.name === sid);
-            const key = skill?.name ?? sid;
-            if (!skillToProfile.has(key)) {
-              skillToProfile.set(key, { name: profile.name, color: profile.color });
-            }
-          }
+    getProjectSkillLinksAll(project.path)
+      .then((data) => {
+        setAllLinks(data);
+        // 若当前 selectedDir 不在 data 中，切换到第一个有数据的 dir
+        if (Object.keys(data).length > 0 && !(selectedDir in data)) {
+          setSelectedDir(Object.keys(data)[0]);
         }
-        const extraSet = new Set(
-          project.extra_skill_ids.map((sid) => {
-            const skill = skills.find((s) => s.id === sid || s.name === sid);
-            return skill?.name ?? sid;
-          })
-        );
-
-        const result: ProjectLink[] = entries.map(([name, target, status]) => {
-          const found = skills.find((s) => s.name === name || s.id === name);
-          const profileInfo = skillToProfile.get(name);
-          const source = profileInfo
-            ? profileInfo.name
-            : extraSet.has(name)
-              ? "Extra"
-              : "Manual";
-
-          return {
-            name,
-            target,
-            status: status as LinkStatus,
-            description: found?.description ?? target,
-            source,
-            sourceColor: profileInfo?.color,
-          };
-        });
-        setLinks(result);
       })
       .catch((err) => {
         console.error("Failed to scan project skills:", err);
-        setLinks([]);
+        setAllLinks({});
       })
       .finally(() => setLoading(false));
   }, [project.id, project.path, profiles, skills]);
+
+  // 将当前选中 dir 的原始数据转为 ProjectLink 对象
+  const links = useMemo<ProjectLink[]>(() => {
+    const entries = allLinks[selectedDir] ?? [];
+
+    // Build reverse-lookup: skill name → profile
+    const skillToProfile = new Map<string, { name: string; color?: string }>();
+    for (const pid of project.profile_ids) {
+      const profile = profiles.find((p) => p.id === pid);
+      if (!profile) continue;
+      for (const sid of profile.skill_ids) {
+        const skill = skills.find((s) => s.id === sid || s.name === sid);
+        const key = skill?.name ?? sid;
+        if (!skillToProfile.has(key)) {
+          skillToProfile.set(key, { name: profile.name, color: profile.color });
+        }
+      }
+    }
+    const extraSet = new Set(
+      project.extra_skill_ids.map((sid) => {
+        const skill = skills.find((s) => s.id === sid || s.name === sid);
+        return skill?.name ?? sid;
+      })
+    );
+
+    return entries.map(([name, target, status]) => {
+      const found = skills.find((s) => s.name === name || s.id === name);
+      const profileInfo = skillToProfile.get(name);
+      const source = profileInfo
+        ? profileInfo.name
+        : extraSet.has(name)
+          ? "Extra"
+          : "Manual";
+
+      return {
+        name,
+        target,
+        status: status as LinkStatus,
+        description: found?.description ?? target,
+        source,
+        sourceColor: profileInfo?.color,
+      };
+    });
+  }, [allLinks, selectedDir, project.profile_ids, project.extra_skill_ids, profiles, skills]);
 
   const handleToggle = useCallback(
     async (link: ProjectLink) => {
@@ -106,23 +122,23 @@ export function ProjectSkillView({ project, onEdit, onBack }: ProjectSkillViewPr
           project.path,
           isActive
         );
-        // 取 .claude 目录的状态代表主状态（向后兼容）
-        const newStatus: LinkStatus = (statusMap[".claude"] ?? (isActive ? "Inactive" : "Active")) as LinkStatus;
-        if (newStatus === "Inactive") {
-          setLinks((prev) => prev.filter((l) => l.name !== link.name));
-        } else {
-          setLinks((prev) =>
-            prev.map((l) =>
-              l.name === link.name ? { ...l, status: newStatus } : l
-            )
-          );
-        }
+        // 取 selectedDir 目录的状态代表当前视图状态
+        const newStatus: LinkStatus = (statusMap[selectedDir] ?? (isActive ? "Inactive" : "Active")) as LinkStatus;
+
+        // 更新 allLinks 中该 dir 的数据
+        setAllLinks((prev) => {
+          const dirLinks = prev[selectedDir] ?? [];
+          const updated = newStatus === "Inactive"
+            ? dirLinks.filter(([n]) => n !== link.name)
+            : dirLinks.map(([n, t, s]) => n === link.name ? [n, t, newStatus] as [string, string, string] : [n, t, s] as [string, string, string]);
+          return { ...prev, [selectedDir]: updated };
+        });
         await recordToggle(link.name, !isActive);
       } catch (err) {
         console.error("Toggle failed:", err);
       }
     },
-    [project.path, skills]
+    [project.path, skills, selectedDir]
   );
 
   const [search, setSearch] = useState("");
@@ -141,6 +157,8 @@ export function ProjectSkillView({ project, onEdit, onBack }: ProjectSkillViewPr
   const activeCount = links.filter(
     (l) => l.status === "Active" || l.status === "Direct"
   ).length;
+
+  const showDirTabs = enabledDirs.length > 1;
 
   return (
     <div className="flex flex-col h-full">
@@ -188,6 +206,34 @@ export function ProjectSkillView({ project, onEdit, onBack }: ProjectSkillViewPr
         </button>
       </div>
 
+      {/* Agent dir tabs — 只在多个启用目录时显示 */}
+      {showDirTabs && (
+        <div
+          className="flex items-center gap-1 border-b border-[var(--color-border)]"
+          style={{ padding: "6px 20px", flexShrink: 0 }}
+        >
+          {enabledDirs.map((d) => (
+            <button
+              key={d.dir}
+              type="button"
+              onClick={() => setSelectedDir(d.dir)}
+              className={`px-2.5 py-1 rounded text-[12px] font-mono transition-colors duration-100 cursor-default
+                ${selectedDir === d.dir
+                  ? "bg-[var(--color-surface-active)] text-[var(--color-text)]"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+            >
+              {d.dir}
+              {allLinks[d.dir] && (
+                <span className="ml-1.5 text-[10px] tabular-nums opacity-60">
+                  {allLinks[d.dir].length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Skill list */}
       <div className="flex-1 overflow-y-auto" style={{ padding: 24 }}>
         <div className="mx-auto" style={{ maxWidth: 720 }}>
@@ -230,10 +276,10 @@ export function ProjectSkillView({ project, onEdit, onBack }: ProjectSkillViewPr
           ) : links.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <p className="text-[13px] text-[var(--color-text-muted)]">
-                No skills linked for this project.
+                No skills linked for this project{showDirTabs ? ` in ${selectedDir}` : ""}.
               </p>
               <p className="text-[12px] text-[var(--color-text-muted)] mt-1">
-                Use Edit to assign profiles, or manually link skills to {project.path}/.claude/skills/
+                Use Edit to assign profiles, or manually link skills to {project.path}/{selectedDir}/skills/
               </p>
             </div>
           ) : filteredLinks.length === 0 ? (

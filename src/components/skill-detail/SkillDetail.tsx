@@ -91,8 +91,9 @@ export function SkillDetail({ onBack }: SkillDetailProps) {
       skill.link_status_user === "Active" ||
       skill.link_status_user === "Direct";
     try {
-      await toggleSkillUserLevel(skill.name, skill.source_path, currentlyActive);
-      const newStatus = currentlyActive ? "Inactive" : "Active";
+      const statusMap = await toggleSkillUserLevel(skill.name, skill.source_path, currentlyActive);
+      // link_status_user 仍取 .claude 的状态（向后兼容）
+      const newStatus = statusMap[".claude"] ?? (currentlyActive ? "Inactive" : "Active");
       updateSkillLinkStatus(skill.name, newStatus);
       await recordToggle(skill.name, !currentlyActive);
     } catch (err) {

@@ -2,8 +2,9 @@ import { useState, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useSkillStore } from "../../store/useSkillStore";
 import { RemoteServerList } from "../remote/RemoteServerList";
+import { AgentDirSettings } from "./AgentDirSettings";
 
-type SettingsTab = "general" | "servers";
+type SettingsTab = "general" | "servers" | "agents";
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -15,7 +16,7 @@ export function SettingsModal({ onClose, initialTab = "general" }: SettingsModal
   const setRepoPath = useSkillStore((s) => s.setRepoPath);
   const scan = useSkillStore((s) => s.scan);
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab as SettingsTab);
   const [path, setPath] = useState(repoPath);
   const [saving, setSaving] = useState(false);
 
@@ -41,7 +42,7 @@ export function SettingsModal({ onClose, initialTab = "general" }: SettingsModal
   const hasChanged = path.trim() !== repoPath;
 
   const tabClass = (tab: SettingsTab) =>
-    `px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors duration-100 ${
+    `px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors duration-100 cursor-default ${
       activeTab === tab
         ? "bg-[var(--color-surface-active)] text-[var(--color-text)]"
         : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
@@ -62,6 +63,9 @@ export function SettingsModal({ onClose, initialTab = "general" }: SettingsModal
               </button>
               <button type="button" onClick={() => setActiveTab("servers")} className={tabClass("servers")}>
                 Servers
+              </button>
+              <button type="button" onClick={() => setActiveTab("agents")} className={tabClass("agents")}>
+                Agents
               </button>
             </div>
           </div>
@@ -142,6 +146,7 @@ export function SettingsModal({ onClose, initialTab = "general" }: SettingsModal
           )}
 
           {activeTab === "servers" && <RemoteServerList />}
+          {activeTab === "agents" && <AgentDirSettings />}
         </div>
 
         {/* Footer (only for general tab) */}

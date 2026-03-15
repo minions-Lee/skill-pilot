@@ -167,17 +167,22 @@ export function SkillGrid() {
         skill.link_status_user === "Active" ||
         skill.link_status_user === "Direct";
 
-      const newStatus: LinkStatus = isCurrentlyActive ? "Inactive" : "Active";
+      const optimisticStatus: LinkStatus = isCurrentlyActive ? "Inactive" : "Active";
 
       // Optimistic update
-      updateSkillLinkStatus(skill.name, newStatus);
+      updateSkillLinkStatus(skill.name, optimisticStatus);
 
       try {
-        await toggleSkillUserLevel(
+        const statusMap = await toggleSkillUserLevel(
           skill.name,
           skill.source_path,
           isCurrentlyActive
         );
+        // 取 .claude 目录的状态代表主状态
+        const realStatus: LinkStatus = (statusMap[".claude"] ?? optimisticStatus) as LinkStatus;
+        if (realStatus !== optimisticStatus) {
+          updateSkillLinkStatus(skill.name, realStatus);
+        }
         await recordToggle(skill.name, !isCurrentlyActive);
       } catch {
         // Revert on failure
