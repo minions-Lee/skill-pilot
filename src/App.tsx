@@ -17,6 +17,7 @@ import { useSkillStore } from "./store/useSkillStore";
 import { useProfileStore } from "./store/useProfileStore";
 import { useProjectStore } from "./store/useProjectStore";
 import { useRemoteStore } from "./store/useRemoteStore";
+import { useAgentDirStore } from "./store/useAgentDirStore";
 import { applyProfileLinks, recordProfileApply } from "./utils/tauri";
 import { resolveProfileSkillEntries } from "./utils/resolveProfileSkills";
 import type { Profile } from "./types/profile";
@@ -43,13 +44,15 @@ export default function App() {
   const projects = useProjectStore((s) => s.projects);
   const selectProject = useProjectStore((s) => s.selectProject);
   const loadServers = useRemoteStore((s) => s.loadServers);
+  const loadAgentDirs = useAgentDirStore((s) => s.loadAgentDirs);
 
   useEffect(() => {
     loadServers();
+    loadAgentDirs();
     scan();
     loadProfiles();
     loadProjects();
-  }, [loadServers, scan, loadProfiles, loadProjects]);
+  }, [loadServers, loadAgentDirs, scan, loadProfiles, loadProjects]);
 
   const handleNewProfile = () => {
     setEditingProfile(null);

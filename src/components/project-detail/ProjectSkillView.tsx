@@ -100,18 +100,20 @@ export function ProjectSkillView({ project, onEdit, onBack }: ProjectSkillViewPr
       const sourcePath = found?.source_path ?? link.target;
 
       try {
-        const newStatus = await toggleSkillProjectLevel(
+        const statusMap = await toggleSkillProjectLevel(
           link.name,
           sourcePath,
           project.path,
           isActive
         );
+        // 取 .claude 目录的状态代表主状态（向后兼容）
+        const newStatus: LinkStatus = (statusMap[".claude"] ?? (isActive ? "Inactive" : "Active")) as LinkStatus;
         if (newStatus === "Inactive") {
           setLinks((prev) => prev.filter((l) => l.name !== link.name));
         } else {
           setLinks((prev) =>
             prev.map((l) =>
-              l.name === link.name ? { ...l, status: newStatus as LinkStatus } : l
+              l.name === link.name ? { ...l, status: newStatus } : l
             )
           );
         }

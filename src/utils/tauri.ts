@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { AgentDir } from "../types/agent-dir";
 import type { Skill } from "../types/skill";
+import type { LinkStatus } from "../types/skill";
 import type { Profile } from "../types/profile";
 import type { ProjectConfig } from "../types/project";
 
@@ -16,7 +18,7 @@ export const toggleSkillUserLevel = (
   sourcePath: string,
   currentlyActive: boolean
 ) =>
-  invoke<string>("toggle_skill_user_level", {
+  invoke<Record<string, LinkStatus>>("toggle_skill_user_level", {
     skillName,
     sourcePath,
     currentlyActive,
@@ -28,7 +30,7 @@ export const toggleSkillProjectLevel = (
   projectPath: string,
   currentlyActive: boolean
 ) =>
-  invoke<string>("toggle_skill_project_level", {
+  invoke<Record<string, LinkStatus>>("toggle_skill_project_level", {
     skillName,
     sourcePath,
     projectPath,
@@ -52,6 +54,24 @@ export const getProjectSkillLinks = (projectPath: string) =>
     projectPath,
   });
 
+export const getProjectSkillLinksAll = (projectPath: string) =>
+  invoke<Record<string, [string, string, string][]>>("get_project_skill_links_all", {
+    projectPath,
+  });
+
+export const syncAgentDirLinks = (
+  sourceDir: string,
+  targetDirs: string[],
+  isUserLevel: boolean,
+  projectPaths: string[]
+) =>
+  invoke<Record<string, string[]>>("sync_agent_dir_links", {
+    sourceDir,
+    targetDirs,
+    isUserLevel,
+    projectPaths,
+  });
+
 export const cleanBrokenLinks = (targetPath: string | null) =>
   invoke<string[]>("clean_broken_links", { targetPath });
 
@@ -73,6 +93,11 @@ export const saveProject = (project: ProjectConfig) =>
   invoke<ProjectConfig>("save_project", { project });
 export const deleteProject = (id: string) =>
   invoke<void>("delete_project", { id });
+
+// Agent Dirs
+export const listAgentDirs = () => invoke<AgentDir[]>("list_agent_dirs");
+export const saveAgentDirs = (dirs: AgentDir[]) =>
+  invoke<AgentDir[]>("save_agent_dirs", { dirs });
 
 // Stats
 export interface Stats {
