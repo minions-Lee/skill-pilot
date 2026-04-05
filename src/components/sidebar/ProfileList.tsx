@@ -24,10 +24,8 @@ export default function ProfileList({
   const loading = useProfileStore((s) => s.loading);
 
   useEffect(() => {
-    if (profiles.length === 0 && !loading) {
-      loadProfiles();
-    }
-  }, [profiles.length, loading, loadProfiles]);
+    loadProfiles();
+  }, [loadProfiles]);
 
   function handleClick(profile: Profile) {
     const newId = selectedProfileId === profile.id ? null : profile.id;
